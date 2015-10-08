@@ -84,9 +84,10 @@ function checkDomain(){
 	connection=$(openssl s_client -showcerts -connect $hostname:443 -servername $servername </dev/null 2>/dev/null)
 
 	if [[ "$connection" == *CN=$hostname* ]]; then
-		echo "cert valid for domain..."
+		echo "Certificate valid for domain $servername"
 	else
-		echo "cert not valid for domain"
+		echo "Certificate is not valid for domain $servername"
+		exit 1
 	fi
 
 	echo ""
