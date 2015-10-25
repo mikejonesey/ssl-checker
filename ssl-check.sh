@@ -26,8 +26,8 @@ function printText(){
 	elif [ "$1" == "atn" ]; then
 		#attention
 		printf "\e[1;33m"
-	elif [ "$1" == "pro" ]; then
-		#property
+	elif [ "$1" == "good" ]; then
+		#good
 		printf "\e[0;32m"
 	elif [ "$1" == "val" ]; then
 		#value
@@ -56,7 +56,7 @@ function checkClient(){
 	elif [[ $badcipher_list == *$cipherUsed* ]]; then
 		echo -e "\e[0;31m  $clientname:  NO - only supports weak ciphers\e[0;37m"
 	elif [[ $goodcipher_list == *$cipherUsed* ]]; then
-		if [[ $pfs_ciphers != *$cipherUsed* ]]; then
+		if [[ ":$pfs_ciphers:" != *:$cipherUsed:* ]]; then
 			echo -e "\e[0;32m  $clientname:  YES : $cipherUsed\e[0;37m"
 		else
 			echo -e "\e[0;32m  $clientname:  YES : $cipherUsed : PFS\e[0;37m"
@@ -123,9 +123,11 @@ function checkDomain(){
 	connection=$(openssl s_client -showcerts -connect $hostname:443 -servername $servername </dev/null 2>/dev/null)
 
 	if [[ "$connection" == *CN=$hostname* ]]; then
-		echo "Certificate valid for domain $servername"
+		echo "Certificate valid for domain $servername"  | printText good
+	elif [[ "$connection" == *CN=\*.$(echo "$hostname" | sed 's/[a-z\-]*\.//')* ]]; then
+		echo "Wildcard certificate valid for domain $servername" | printText good
 	else
-		echo "Certificate is not valid for domain $servername"
+		echo "Certificate is not valid for domain $servername" | printText err
 	fi
 
 	echo ""
@@ -199,7 +201,7 @@ function checkDomain(){
 			fi			
 		done
 	else
-		echo -e "\tNo weak ciphers supported" | printText pro
+		echo -e "\tNo weak ciphers supported" | printText good
 	fi
 	echo ""
 
