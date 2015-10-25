@@ -17,6 +17,32 @@ printf "\e[0;37m"
 
 pfs_ciphers="ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-SHA256:DHE-DSS-AES256-GCM-SHA384:DHE-DSS-AES128-GCM-SHA256:DHE-DSS-AES256-SHA256:DHE-DSS-AES128-SHA256"
 
+weak_ciphers="EDH-RSA-DES-CBC-SHA:EDH-DSS-DES-CBC-SHA:ADH-DES-CBC-SHA:DES-CBC-SHA:RC4:EXPORT"
+
+function printText(){
+	if [ "$1" == "inf" ]; then
+		#info
+		printf "\e[0;33m"
+	elif [ "$1" == "atn" ]; then
+		#attention
+		printf "\e[1;33m"
+	elif [ "$1" == "pro" ]; then
+		#property
+		printf "\e[0;32m"
+	elif [ "$1" == "val" ]; then
+		#value
+		printf "\e[0;36m"
+	elif [ "$1" == "err" ]; then
+		#error
+		printf "\e[0;31m"
+	else
+		#norm white
+		printf "\e[0;37m"
+	fi
+	while read aline; do echo "$aline"; done
+	echo -ne "\e[0m"
+}
+
 function checkClient(){
 	servername="$1"
 	hostname="$2"
@@ -35,6 +61,19 @@ function checkClient(){
 		else
 			echo -e "\e[0;32m  $clientname:  YES : $cipherUsed : PFS\e[0;37m"
 		fi
+	fi
+}
+
+function genericCipherTest(){
+	servername="$1"
+	hostname="$2"
+	cipher_list="$3"
+	client_test=$(openssl s_client -connect $hostname:443 -servername $servername -tls1 -cipher "$cipher_list" </dev/null 2>&1)
+	cipherUsed=$(echo "$client_test" | grep "New, TLSv1/SSLv3, Cipher is .*" | sed 's/.*Cipher is //')
+	if [ -z "$cipherUsed" ]; then
+		return 1
+	elif [[ $cipher_list == *$cipherUsed* ]]; then
+		return 0
 	fi
 }
 
@@ -87,7 +126,6 @@ function checkDomain(){
 		echo "Certificate valid for domain $servername"
 	else
 		echo "Certificate is not valid for domain $servername"
-		exit 1
 	fi
 
 	echo ""
@@ -147,9 +185,25 @@ function checkDomain(){
 	else
 		echo -e "\e[0;32m  Supports PFS:  YES : $pfsCipher : $pub_key_bit\e[0;37m"
 	fi
-
 	echo ""
-	echo "Client Support:"
+
+	echo "Weak cipher test:"
+	genericCipherTest "$servername" "$hostname" "$weak_ciphers"
+	if [ "$?" != "1" ]; then
+		echo -e "\tWeak ciphers supported" | printText err
+		weak_cipher_list=($(echo "$weak_ciphers" | sed 's/:/ /g'))
+		for ((i=0; i<${#weak_cipher_list[@]}; i++)); do
+			genericCipherTest "$servername" "$hostname" "${weak_cipher_list[$i]}"
+			if [ "$?" != "1" ]; then
+				echo "Weak cipher support: ${weak_cipher_list[$i]}" | printText err
+			fi			
+		done
+	else
+		echo -e "\tNo weak ciphers supported" | printText pro
+	fi
+	echo ""
+
+	echo "Client Support:" | printText
 
 	##################################################
 	# Android 2.3.7
