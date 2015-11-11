@@ -122,6 +122,11 @@ function checkDomain(){
 	hostname="$2"
 	connection=$(openssl s_client -showcerts -connect $hostname:443 -servername $servername </dev/null 2>/dev/null)
 
+	if [ -z "$connection" ]; then
+		echo -e "\e[0;31m  Connection Failed!\e[0;37m"
+		exit 1
+	fi
+
 	if [[ "$connection" == *CN=$hostname* ]]; then
 		echo "Certificate valid for domain $servername"  | printText good
 	elif [[ "$connection" == *CN=\*.$(echo "$hostname" | sed 's/[a-z\-]*\.//')* ]]; then
