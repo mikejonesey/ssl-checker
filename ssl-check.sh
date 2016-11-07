@@ -78,8 +78,8 @@ function genericCipherTest(){
 }
 
 function checkPfsCipher(){
-	servername="$1"
-	hostname="$2"
+	hostname="$1"
+	servername="$2"
 	# Support for > 1024 bit keys
 	#ECDHE-RSA-AES256-GCM-SHA384 TLSv1.2 Kx=ECDH     Au=RSA  Enc=AESGCM(256) Mac=AEAD
 	#ECDHE-ECDSA-AES256-GCM-SHA384 TLSv1.2 Kx=ECDH     Au=ECDSA Enc=AESGCM(256) Mac=AEAD
@@ -131,6 +131,8 @@ function checkDomain(){
 		echo "Certificate valid for domain $servername"  | printText good
 	elif [[ "$connection" == *CN=\*.$(echo "$hostname" | sed 's/[a-z\-]*\.//')* ]]; then
 		echo "Wildcard certificate valid for domain $servername" | printText good
+	elif [[ "$connection" == *CN=\*.$(echo "$servername" | sed 's/[a-z\-]*\.//')* ]]; then
+		echo "Wildcard certificate valid for domain (Alias) $servername" | printText good
 	else
 		echo "Certificate is not valid for domain $servername" | printText err
 	fi
