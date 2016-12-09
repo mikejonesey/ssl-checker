@@ -13,6 +13,16 @@ else
 	servername="$1"
 fi
 
+conport="443"
+if [[ "$hostname" == *":"* ]]; then
+	conport=$(echo "$hostname" | sed 's/.*://')
+	hostname=$(echo "$hostname" | sed 's/:.*//')
+fi
+if [[ "$servername" == *":"* ]]; then
+        conport=$(echo "$servername" | sed 's/.*://')
+        servername=$(echo "$servername" | sed 's/:.*//')
+fi
+
 printf "\e[0;37m"
 
 #pfs_ciphers="ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-SHA256:DHE-DSS-AES256-GCM-SHA384:DHE-DSS-AES128-GCM-SHA256:DHE-DSS-AES256-SHA256:DHE-DSS-AES128-SHA256"
@@ -52,7 +62,7 @@ function checkClient(){
 	clientname="$3"
 	goodcipher_list="$4"
 	badcipher_list="$5"
-	client_test=$(openssl s_client -connect $hostname:443 -servername $servername -tls1 -cipher "$goodcipher_list:$badcipher_list" </dev/null 2>&1)
+	client_test=$(openssl s_client -connect $hostname:$conport -servername $servername -tls1 -cipher "$goodcipher_list:$badcipher_list" </dev/null 2>&1)
 	conProtoUsed=$(echo "$client_test" | egrep "New, (SSLv3|TLSv1/SSLv3|TLSv1.1|TLSv1.2), Cipher is .*" | sed 's/, Cipher is .*//;s/New, //')
 	sesProtoUsed=$(echo "$client_test" | grep "^SSL-Session" -A2 | grep "Protocol" | awk '{print $3}')
 	cipherUsed=$(echo "$client_test" | egrep "New, (SSLv3|TLSv1/SSLv3|TLSv1.1|TLSv1.2), Cipher is .*" | sed 's/.*Cipher is //')
@@ -73,7 +83,7 @@ function genericCipherTest(){
 	servername="$1"
 	hostname="$2"
 	cipher_list="$3"
-	client_test=$(openssl s_client -connect $hostname:443 -servername $servername -tls1 -cipher "$cipher_list" </dev/null 2>&1)
+	client_test=$(openssl s_client -connect $hostname:$conport -servername $servername -tls1 -cipher "$cipher_list" </dev/null 2>&1)
 	cipherUsed=$(echo "$client_test" | egrep "New, (TLSv1/SSLv3|TLSv1.1|TLSv1.2), Cipher is .*" | sed 's/.*Cipher is //')
 	if [ -z "$cipherUsed" ]; then
 		return 1
@@ -103,7 +113,7 @@ function checkPfsCipher(){
 	#DHE-DSS-AES256-SHA256   TLSv1.2 Kx=DH       Au=DSS  Enc=AES(256)  Mac=SHA256
 	#DHE-DSS-AES128-GCM-SHA256 TLSv1.2 Kx=DH       Au=DSS  Enc=AESGCM(128) Mac=AEAD
 	#DHE-DSS-AES128-SHA256   TLSv1.2 Kx=DH       Au=DSS  Enc=AES(128)  Mac=SHA256
-	pfs_test=$(openssl s_client -connect $hostname:443 -servername $servername -cipher "$pfs_ciphers" </dev/null 2>&1)
+	pfs_test=$(openssl s_client -connect $hostname:$conport -servername $servername -cipher "$pfs_ciphers" </dev/null 2>&1)
 	if [ -n "$(echo "$pfs_test" | grep "error setting cipher list")" ]; then
 		echo "Local Testing node does not support pfs ciphers" >&2
 		return 1
@@ -125,7 +135,7 @@ function checkPfsCipher(){
 function checkDomain(){
 	servername="$1"
 	hostname="$2"
-	connection=$(openssl s_client -showcerts -connect $hostname:443 -servername $servername </dev/null 2>/dev/null)
+	connection=$(openssl s_client -showcerts -connect $hostname:$conport -servername $servername </dev/null 2>/dev/null)
 
 	if [ -z "$connection" ]; then
 		echo -e "\e[0;31m  Connection Failed!\e[0;37m"
