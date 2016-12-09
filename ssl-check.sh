@@ -110,7 +110,7 @@ function checkPfsCipher(){
 		echo "1024 bit"
 		return 2
 	elif [ -n "$(echo "$pfs_test" | grep "SSL handshake has read")" ]; then
-		cipherUsed=$(echo "$pfs_test" | grep "New, TLSv1/SSLv3, Cipher is .*" | sed 's/.*Cipher is //')
+		cipherUsed=$(echo "$pfs_test" | egrep "New, (TLSv1/SSLv3|TLSv1.1|TLSv1.2), Cipher is .*" | sed 's/.*Cipher is //')
 		echo "$cipherUsed"
 		return 0
 	fi
