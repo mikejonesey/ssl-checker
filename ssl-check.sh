@@ -15,7 +15,9 @@ fi
 
 printf "\e[0;37m"
 
-pfs_ciphers="ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-SHA256:DHE-DSS-AES256-GCM-SHA384:DHE-DSS-AES128-GCM-SHA256:DHE-DSS-AES256-SHA256:DHE-DSS-AES128-SHA256"
+#pfs_ciphers="ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES128-SHA256:DHE-DSS-AES256-GCM-SHA384:DHE-DSS-AES128-GCM-SHA256:DHE-DSS-AES256-SHA256:DHE-DSS-AES128-SHA256"
+
+pfs_ciphers="ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-DSS-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-CCM8:ECDHE-ECDSA-AES256-CCM:DHE-RSA-AES256-CCM8:DHE-RSA-AES256-CCM:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-CCM8:ECDHE-ECDSA-AES128-CCM:DHE-RSA-AES128-CCM8:DHE-RSA-AES128-CCM:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA256:ECDHE-ECDSA-CAMELLIA256-SHA384:ECDHE-RSA-CAMELLIA256-SHA384:DHE-RSA-CAMELLIA256-SHA256:DHE-DSS-CAMELLIA256-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA256:DHE-DSS-AES128-SHA256:ECDHE-ECDSA-CAMELLIA128-SHA256:ECDHE-RSA-CAMELLIA128-SHA256:DHE-RSA-CAMELLIA128-SHA256:DHE-DSS-CAMELLIA128-SHA256:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES256-SHA:DHE-DSS-AES256-SHA:DHE-RSA-CAMELLIA256-SHA:DHE-DSS-CAMELLIA256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA:DHE-RSA-CAMELLIA128-SHA:DHE-DSS-CAMELLIA128-SHA:DHE-PSK-AES256-GCM-SHA384:DHE-PSK-CHACHA20-POLY1305:ECDHE-PSK-CHACHA20-POLY1305:DHE-PSK-AES256-CCM8:DHE-PSK-AES256-CCM:DHE-PSK-AES128-GCM-SHA256:DHE-PSK-AES128-CCM8:DHE-PSK-AES128-CCM:ECDHE-PSK-AES256-CBC-SHA384:ECDHE-PSK-AES256-CBC-SHA:DHE-PSK-AES256-CBC-SHA384:DHE-PSK-AES256-CBC-SHA:ECDHE-PSK-CAMELLIA256-SHA384:DHE-PSK-CAMELLIA256-SHA384:ECDHE-PSK-AES128-CBC-SHA256:ECDHE-PSK-AES128-CBC-SHA:DHE-PSK-AES128-CBC-SHA256:DHE-PSK-AES128-CBC-SHA:ECDHE-PSK-CAMELLIA128-SHA256:DHE-PSK-CAMELLIA128-SHA256"
 
 weak_ciphers="EDH-RSA-DES-CBC-SHA:EDH-DSS-DES-CBC-SHA:ADH-DES-CBC-SHA:DES-CBC-SHA:RC4:EXPORT"
 
@@ -50,16 +52,17 @@ function checkClient(){
 	goodcipher_list="$4"
 	badcipher_list="$5"
 	client_test=$(openssl s_client -connect $hostname:443 -servername $servername -tls1 -cipher "$goodcipher_list:$badcipher_list" </dev/null 2>&1)
-	cipherUsed=$(echo "$client_test" | grep "New, TLSv1/SSLv3, Cipher is .*" | sed 's/.*Cipher is //')
+	protoUsed=$(echo "$client_test" | egrep "New, (SSLv3|TLSv1/SSLv3|TLSv1.1|TLSv1.2), Cipher is .*" | sed 's/, Cipher is .*//;s/New, //')
+	cipherUsed=$(echo "$client_test" | egrep "New, (SSLv3|TLSv1/SSLv3|TLSv1.1|TLSv1.2), Cipher is .*" | sed 's/.*Cipher is //')
 	if [ -z "$cipherUsed" ]; then
 		echo -e "\e[0;31m  $clientname:  NO\e[0;37m"
 	elif [[ $badcipher_list == *$cipherUsed* ]]; then
 		echo -e "\e[0;31m  $clientname:  NO - only supports weak ciphers\e[0;37m"
 	elif [[ $goodcipher_list == *$cipherUsed* ]]; then
 		if [[ ":$pfs_ciphers:" != *:$cipherUsed:* ]]; then
-			echo -e "\e[0;32m  $clientname:  YES : $cipherUsed\e[0;37m"
+			echo -e "\e[0;32m  $clientname:  YES : p: $protoUsed c: $cipherUsed (NO PFS)\e[0;37m"
 		else
-			echo -e "\e[0;32m  $clientname:  YES : $cipherUsed : PFS\e[0;37m"
+			echo -e "\e[0;32m  $clientname:  YES : p: $protoUsed c: $cipherUsed : PFS\e[0;37m"
 		fi
 	fi
 }
@@ -69,7 +72,7 @@ function genericCipherTest(){
 	hostname="$2"
 	cipher_list="$3"
 	client_test=$(openssl s_client -connect $hostname:443 -servername $servername -tls1 -cipher "$cipher_list" </dev/null 2>&1)
-	cipherUsed=$(echo "$client_test" | grep "New, TLSv1/SSLv3, Cipher is .*" | sed 's/.*Cipher is //')
+	cipherUsed=$(echo "$client_test" | egrep "New, (TLSv1/SSLv3|TLSv1.1|TLSv1.2), Cipher is .*" | sed 's/.*Cipher is //')
 	if [ -z "$cipherUsed" ]; then
 		return 1
 	elif [[ $cipher_list == *$cipherUsed* ]]; then
@@ -105,7 +108,7 @@ function checkPfsCipher(){
 	elif [ -n "$(echo "$pfs_test" | grep "alert handshake failure")" ]; then
 		echo "Server being tested does not support pfs ciphers" >&2
 		return 1
-	elif [ -n "$(echo "$pfs_test" | grep "SSL handshake has read")" -a -n "$(echo "$pfs_test" | grep "New, TLSv1/SSLv3, Cipher is .*DSS.*")" ]; then
+	elif [ -n "$(echo "$pfs_test" | grep "SSL handshake has read")" -a -n "$(echo "$pfs_test" | egrep "New, (TLSv1/SSLv3|TLSv1.1|TLSv1.2), Cipher is .*DSS.*")" ]; then
 		echo "Server being tested supports pfs but only using depriciated ciphers" >&2
 		echo "1024 bit"
 		return 2
@@ -305,6 +308,23 @@ function checkDomain(){
         #0x00,0x0A - SSL_RSA_WITH_3DES_EDE_CBC_SHA - DES-CBC3-SHA            SSLv3 Kx=RSA      Au=RSA  Enc=3DES(168) Mac=SHA1
 
 	checkClient "$servername" "$hostname" "Firefox 40 / Linux" "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:AES128-SHA:AES256-SHA:DES-CBC3-SHA" ""
+
+        ##################################################
+        # Firefox 45.5.1 / Linux
+        ##################################################
+        # 0xC0,0x2B - ECDHE-ECDSA-AES128-GCM-SHA256 TLSv1.2 Kx=ECDH     Au=ECDSA Enc=AESGCM(128) Mac=AEAD
+        # 0xC0,0x2F - ECDHE-RSA-AES128-GCM-SHA256 TLSv1.2 Kx=ECDH     Au=RSA  Enc=AESGCM(128) Mac=AEAD
+        # 0xC0,0x0A - ECDHE-ECDSA-AES256-SHA  SSLv3 Kx=ECDH     Au=ECDSA Enc=AES(256)  Mac=SHA1
+        # 0xC0,0x09 - ECDHE-ECDSA-AES128-SHA  SSLv3 Kx=ECDH     Au=ECDSA Enc=AES(128)  Mac=SHA1
+        # 0xC0,0x13 - ECDHE-RSA-AES128-SHA    SSLv3 Kx=ECDH     Au=RSA  Enc=AES(128)  Mac=SHA1
+        # 0xC0,0x14 - ECDHE-RSA-AES256-SHA    SSLv3 Kx=ECDH     Au=RSA  Enc=AES(256)  Mac=SHA1
+        # 0x00,0x33 - DHE-RSA-AES128-SHA      SSLv3 Kx=DH       Au=RSA  Enc=AES(128)  Mac=SHA1
+        # 0x00,0x39 - DHE-RSA-AES256-SHA      SSLv3 Kx=DH       Au=RSA  Enc=AES(256)  Mac=SHA1
+        # 0x00,0x2F - AES128-SHA              SSLv3 Kx=RSA      Au=RSA  Enc=AES(128)  Mac=SHA1
+        # 0x00,0x35 - AES256-SHA              SSLv3 Kx=RSA      Au=RSA  Enc=AES(256)  Mac=SHA1
+        # 0x00,0x0A - DES-CBC3-SHA            SSLv3 Kx=RSA      Au=RSA  Enc=3DES(168) Mac=SHA1
+
+	checkClient "$servername" "$hostname" "Firefox 45.5.1 / Linux" "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA" "AES128-SHA:AES256-SHA:DES-CBC3-SHA"
 
 	##################################################
 	# Googlebot Feb 2015
