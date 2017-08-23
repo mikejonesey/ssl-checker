@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# use a custom ssl binary that still has bad ciphers
+export PATH="/home/mike/usr/local/badssl/bin:$PATH"
+
 if [ -n "$1" ]; then
 	hostname=$1
 else
@@ -30,7 +33,16 @@ printf "\e[0;37m"
 #mike@mike-laptop4:~$ openssl ciphers -v ALL | grep DHE | awk '{print $1}' | tr "\n" ":" | sed 's/:$/\n/'
 pfs_ciphers=":ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-DSS-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES256-CCM8:ECDHE-ECDSA-AES256-CCM:DHE-RSA-AES256-CCM8:DHE-RSA-AES256-CCM:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:DHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-CCM8:ECDHE-ECDSA-AES128-CCM:DHE-RSA-AES128-CCM8:DHE-RSA-AES128-CCM:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA256:ECDHE-ECDSA-CAMELLIA256-SHA384:ECDHE-RSA-CAMELLIA256-SHA384:DHE-RSA-CAMELLIA256-SHA256:DHE-DSS-CAMELLIA256-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA256:DHE-DSS-AES128-SHA256:ECDHE-ECDSA-CAMELLIA128-SHA256:ECDHE-RSA-CAMELLIA128-SHA256:DHE-RSA-CAMELLIA128-SHA256:DHE-DSS-CAMELLIA128-SHA256:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES256-SHA:DHE-DSS-AES256-SHA:DHE-RSA-CAMELLIA256-SHA:DHE-DSS-CAMELLIA256-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA:DHE-RSA-SEED-SHA:DHE-DSS-SEED-SHA:DHE-RSA-CAMELLIA128-SHA:DHE-DSS-CAMELLIA128-SHA:DHE-PSK-AES256-GCM-SHA384:DHE-PSK-CHACHA20-POLY1305:ECDHE-PSK-CHACHA20-POLY1305:DHE-PSK-AES256-CCM8:DHE-PSK-AES256-CCM:DHE-PSK-AES128-GCM-SHA256:DHE-PSK-AES128-CCM8:DHE-PSK-AES128-CCM:ECDHE-PSK-AES256-CBC-SHA384:ECDHE-PSK-AES256-CBC-SHA:DHE-PSK-AES256-CBC-SHA384:DHE-PSK-AES256-CBC-SHA:ECDHE-PSK-CAMELLIA256-SHA384:DHE-PSK-CAMELLIA256-SHA384:ECDHE-PSK-AES128-CBC-SHA256:ECDHE-PSK-AES128-CBC-SHA:DHE-PSK-AES128-CBC-SHA256:DHE-PSK-AES128-CBC-SHA:ECDHE-PSK-CAMELLIA128-SHA256:DHE-PSK-CAMELLIA128-SHA256:"
 
-weak_ciphers="EDH-RSA-DES-CBC-SHA:EDH-DSS-DES-CBC-SHA:ADH-DES-CBC-SHA:DES-CBC-SHA:RC4:EXPORT"
+#weak_ciphers="EDH-RSA-DES-CBC-SHA:EDH-DSS-DES-CBC-SHA:ADH-DES-CBC-SHA:DES-CBC-SHA:RC4:EXPORT"
+weak_ciphers="DHE-RSA-CAMELLIA256-SHA:DHE-DSS-CAMELLIA256-SHA:AECDH-AES256-SHA:ADH-AES256-GCM-SHA384:ADH-AES256-SHA256:ADH-AES256-SHA:ADH-CAMELLIA256-SHA:AES256-GCM-SHA384:AES256-SHA256:AES256-SHA:CAMELLIA256-SHA:ECDHE-RSA-DES-CBC3-SHA:ECDHE-ECDSA-DES-CBC3-SHA:DHE-RSA-CAMELLIA128-SHA:DHE-DSS-CAMELLIA128-SHA:EDH-RSA-DES-CBC3-SHA:EDH-DSS-DES-CBC3-SHA:AECDH-AES128-SHA:ADH-AES128-GCM-SHA256:ADH-AES128-SHA256:ADH-AES128-SHA:AECDH-DES-CBC3-SHA:ADH-CAMELLIA128-SHA:ADH-DES-CBC3-SHA:ECDH-RSA-DES-CBC3-SHA:ECDH-ECDSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES128-SHA256:AES128-SHA:CAMELLIA128-SHA:DES-CBC3-SHA:PSK-3DES-EDE-CBC-SHA:KRB5-DES-CBC3-SHA:KRB5-DES-CBC3-MD5:RC4:EXPORT"
+
+# need to be added to weak:
+
+#|       TLS_RSA_WITH_3DES_EDE_CBC_SHA (rsa 2048) - C
+#|       TLS_RSA_WITH_IDEA_CBC_SHA (rsa 2048) - A
+#|       TLS_ECDHE_RSA_WITH_RC4_128_SHA (secp256r1) - C
+#|       TLS_RSA_WITH_RC4_128_SHA (rsa 2048) - C
+#|       TLS_RSA_WITH_RC4_128_MD5 (rsa 2048) - C
 
 function printText(){
 	if [ "$1" == "inf" ]; then
@@ -62,7 +74,7 @@ function checkClient(){
 	clientname="$3"
 	goodcipher_list="$4"
 	badcipher_list="$5"
-	client_test=$(openssl s_client -connect $hostname:$conport -servername $servername -tls1 -cipher "$goodcipher_list:$badcipher_list" </dev/null 2>&1)
+	client_test=$(openssl s_client -connect $hostname:$conport -servername $servername -cipher "$goodcipher_list:$badcipher_list" </dev/null 2>&1)
 	conProtoUsed=$(echo "$client_test" | egrep "New, (SSLv3|TLSv1/SSLv3|TLSv1.1|TLSv1.2), Cipher is .*" | sed 's/, Cipher is .*//;s/New, //')
 	sesProtoUsed=$(echo "$client_test" | grep "^SSL-Session" -A2 | grep "Protocol" | awk '{print $3}')
 	cipherUsed=$(echo "$client_test" | egrep "New, (SSLv3|TLSv1/SSLv3|TLSv1.1|TLSv1.2), Cipher is .*" | sed 's/.*Cipher is //')
@@ -83,7 +95,8 @@ function genericCipherTest(){
 	servername="$1"
 	hostname="$2"
 	cipher_list="$3"
-	client_test=$(openssl s_client -connect $hostname:$conport -servername $servername -tls1 -cipher "$cipher_list" </dev/null 2>&1)
+	#client_test=$(openssl s_client -connect $hostname:$conport -servername $servername -tls1_2 -cipher "$cipher_list" </dev/null 2>&1)
+	client_test=$(openssl s_client -connect $hostname:$conport -servername $servername -cipher "$cipher_list" </dev/null 2>&1)
 	cipherUsed=$(echo "$client_test" | egrep "New, (TLSv1/SSLv3|TLSv1.1|TLSv1.2), Cipher is .*" | sed 's/.*Cipher is //')
 	if [ -z "$cipherUsed" ]; then
 		return 1
@@ -144,9 +157,9 @@ function checkDomain(){
 
 	if [[ "$connection" == *CN=$hostname* ]]; then
 		echo "Certificate valid for domain $servername"  | printText good
-	elif [[ "$connection" == *CN=\*.$(echo "$hostname" | sed 's/[a-z\-]*\.//')* ]]; then
+	elif [[ "$connection" == *CN=\*.$(echo "$hostname" | sed 's/[a-z0-9\-]*\.//')* ]]; then
 		echo "Wildcard certificate valid for domain $servername" | printText good
-	elif [[ "$connection" == *CN=\*.$(echo "$servername" | sed 's/[a-z\-]*\.//')* ]]; then
+	elif [[ "$connection" == *CN=\*.$(echo "$servername" | sed 's/[a-z0-9\-]*\.//')* ]]; then
 		echo "Wildcard certificate valid for domain (Alias) $servername" | printText good
 	else
 		echo "Certificate is not valid for domain $servername" | printText err
